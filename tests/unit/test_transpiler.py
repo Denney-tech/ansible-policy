@@ -335,6 +335,367 @@ def test_LessThan_than():
 
 
 ##
+# NegateExpression
+##
+ast_Negate_1 = {"NegateExpression": {"Input": "input.friends"}}
+
+rego_Negate_1 = """
+test = true if {
+    not input.friends
+}
+"""
+
+
+def test_Negate():
+    assert rego_Negate_1 == et.NegateExpression.make_rego("test", ast_Negate_1)
+
+
+##
+# AffirmExpression
+##
+# TODO: Change to Class
+ast_Affirm_1 = {"Input": "input.friends"}
+
+rego_Affirm_1 = """
+test = true if {
+    input.friends
+}
+"""
+
+
+def test_Affirm():
+    result, _ = et.handle_non_operator_expression(ast_Affirm_1, "test", "", "", "")
+    assert rego_Affirm_1 == result.body
+
+
+##
+# SearchMatchesExpression and SearchNotMatchesExpression
+##
+ast_Search_1 = {
+    "SearchMatchesExpression": {
+        "lhs": {"Input": "input.range"},
+        "rhs": {
+            "SearchType": {
+                "kind": {"String": "search"},
+                "options": [
+                    {
+                        "name": {"String": "ignorecase"},
+                        "value": {"Boolean": True},
+                    },
+                ],
+                "pattern": {"String": "example"},
+            }
+        },
+    }
+}
+
+rego_Search_1 = """
+test = true if {
+    contains(lower(input.range), lower("example"))
+}
+"""
+
+ast_SearchNot_1 = {
+    "SearchNotMatchesExpression": {
+        "lhs": {"Input": "input.range"},
+        "rhs": {
+            "SearchType": {
+                "kind": {"String": "search"},
+                "options": [
+                    {
+                        "name": {"String": "ignorecase"},
+                        "value": {"Boolean": True},
+                    },
+                ],
+                "pattern": {"String": "example"},
+            }
+        },
+    }
+}
+
+rego_SearchNot_1 = """
+test = true if {
+    not contains(lower(input.range), lower("example"))
+}
+"""
+
+ast_Match_1 = {
+    "SearchMatchesExpression": {
+        "lhs": {"Input": "input.range"},
+        "rhs": {
+            "SearchType": {
+                "kind": {"String": "match"},
+                "options": [
+                    {
+                        "name": {"String": "ignorecase"},
+                        "value": {"Boolean": True},
+                    },
+                ],
+                "pattern": {"String": "example"},
+            }
+        },
+    }
+}
+
+rego_Match_1 = """
+test = true if {
+    startswith(lower(input.range), lower("example"))
+}
+"""
+
+ast_MatchNot_1 = {
+    "SearchNotMatchesExpression": {
+        "lhs": {"Input": "input.range"},
+        "rhs": {
+            "SearchType": {
+                "kind": {"String": "match"},
+                "options": [
+                    {
+                        "name": {"String": "ignorecase"},
+                        "value": {"Boolean": True},
+                    },
+                ],
+                "pattern": {"String": "example"},
+            }
+        },
+    }
+}
+
+rego_MatchNot_1 = """
+test = true if {
+    not startswith(lower(input.range), lower("example"))
+}
+"""
+
+ast_Regex_1 = {
+    "SearchMatchesExpression": {
+        "lhs": {"Input": "input.range"},
+        "rhs": {
+            "SearchType": {
+                "kind": {"String": "regex"},
+                "options": [
+                    {
+                        "name": {"String": "ignorecase"},
+                        "value": {"Boolean": True},
+                    },
+                ],
+                "pattern": {"String": "ex*e"},
+            }
+        },
+    }
+}
+
+rego_Regex_1 = """
+test = true if {
+    regex.find_n(lower("ex*e"), lower(input.range), 1) != []
+}
+"""
+
+ast_RegexNot_1 = {
+    "SearchNotMatchesExpression": {
+        "lhs": {"Input": "input.range"},
+        "rhs": {
+            "SearchType": {
+                "kind": {"String": "regex"},
+                "options": [
+                    {
+                        "name": {"String": "ignorecase"},
+                        "value": {"Boolean": True},
+                    },
+                ],
+                "pattern": {"String": "ex*e"},
+            }
+        },
+    }
+}
+
+rego_RegexNot_1 = """
+test = true if {
+    regex.find_n(lower("ex*e"), lower(input.range), 1) == []
+}
+"""
+
+
+def test_SearchMatches():
+    assert rego_Search_1 == et.SearchMatchesExpression.make_rego("test", ast_Search_1)
+    assert rego_SearchNot_1 == et.SearchNotMatchesExpression.make_rego("test", ast_SearchNot_1)
+    assert rego_Match_1 == et.SearchMatchesExpression.make_rego("test", ast_Match_1)
+    assert rego_MatchNot_1 == et.SearchNotMatchesExpression.make_rego("test", ast_MatchNot_1)
+    assert rego_Regex_1 == et.SearchMatchesExpression.make_rego("test", ast_Regex_1)
+    assert rego_RegexNot_1 == et.SearchNotMatchesExpression.make_rego("test", ast_RegexNot_1)
+
+
+##
+# SelectExpression and SelectNotExpression
+##
+ast_Select_1 = {
+    "SelectExpression": {
+        "lhs": {"Input": "input.range"},
+        "rhs": {
+            "operator": {
+                "String": ">=",
+            },
+            "value": {"Integer": 10},
+        },
+    }
+}
+
+rego_Select_1 = """
+test = true if {
+    array := [item | item := input.range[_]; item >= 10]
+    count(array) > 0
+}
+"""
+
+ast_Select_2 = {
+    "SelectExpression": {
+        "lhs": {"Input": "input.range"},
+        "rhs": {
+            "operator": {
+                "String": "search",
+            },
+            "value": {"String": "val"},
+        },
+    }
+}
+
+rego_Select_2 = """
+test = true if {
+    rhs_list = to_list("val")
+    check_item_in_list(input.range, rhs_list)
+}
+"""
+
+ast_NotSelect_1 = {
+    "SelectNotExpression": {
+        "lhs": {"Input": "input.range"},
+        "rhs": {
+            "operator": {
+                "String": ">=",
+            },
+            "value": {"Integer": 10},
+        },
+    }
+}
+
+rego_NotSelect_1 = """
+test = true if {
+    array := [item | item := input.range[_]; item >= 10]
+    count(array) == 0
+}
+"""
+
+ast_NotSelect_2 = {
+    "SelectNotExpression": {
+        "lhs": {"Input": "input.range"},
+        "rhs": {
+            "operator": {
+                "String": "search",
+            },
+            "value": {"String": "val"},
+        },
+    }
+}
+
+rego_NotSelect_2 = """
+test = true if {
+    rhs_list = to_list("val")
+    check_item_not_in_list(input.range, rhs_list)
+}
+"""
+
+
+def test_Select():
+    assert rego_Select_1 == et.SelectExpression.make_rego("test", ast_Select_1)
+    assert rego_Select_2 == et.SelectExpression.make_rego("test", ast_Select_2)
+    assert rego_NotSelect_1 == et.SelectNotExpression.make_rego("test", ast_NotSelect_1)
+    assert rego_NotSelect_2 == et.SelectNotExpression.make_rego("test", ast_NotSelect_2)
+
+
+##
+# SelectAttrExpression and SelectAttrNotExpression
+##
+ast_SelectAttr_1 = {
+    "SelectAttrExpression": {
+        "lhs": {"Input": "input.range"},
+        "rhs": {
+            "key": {"String": "age"},
+            "operator": {"String": ">="},
+            "value": {"Integer": 10},
+        },
+    }
+}
+
+rego_SelectAttr_1 = """
+test = true if {
+    array := [item | item := input.range[_]; object.get(item, ["age"], "none") >= 10]
+    count(array) > 0
+}
+"""
+
+ast_SelectAttr_2 = {
+    "SelectAttrExpression": {
+        "lhs": {"Input": "input.range"},
+        "rhs": {
+            "key": {"String": "age"},
+            "operator": {"String": "search"},
+            "value": {"String": "val"},
+        },
+    }
+}
+
+rego_SelectAttr_2 = """
+test = true if {
+    rhs_list = to_list("val")
+    check_item_key_in_list(input.range, rhs_list, ["age"])
+}
+"""
+
+ast_NotSelectAttr_1 = {
+    "SelectAttrNotExpression": {
+        "lhs": {"Input": "input.range"},
+        "rhs": {
+            "key": {"String": "age"},
+            "operator": {"String": ">="},
+            "value": {"Integer": 10},
+        },
+    }
+}
+
+rego_NotSelectAttr_1 = """
+test = true if {
+    array := [item | item := input.range[_]; object.get(item, ["age"], "none") >= 10]
+    count(array) == 0
+}
+"""
+
+ast_NotSelectAttr_2 = {
+    "SelectAttrNotExpression": {
+        "lhs": {"Input": "input.range"},
+        "rhs": {
+            "key": {"String": "age"},
+            "operator": {"String": "search"},
+            "value": {"String": "val"},
+        },
+    }
+}
+
+rego_NotSelectAttr_2 = """
+test = true if {
+    rhs_list = to_list("val")
+    check_item_key_not_in_list(input.range, rhs_list, ["age"])
+}
+"""
+
+
+def test_SelectAttr():
+    assert rego_SelectAttr_1 == et.SelectAttrExpression.make_rego("test", ast_SelectAttr_1)
+    assert rego_SelectAttr_2 == et.SelectAttrExpression.make_rego("test", ast_SelectAttr_2)
+    assert rego_NotSelectAttr_1 == et.SelectAttrNotExpression.make_rego("test", ast_NotSelectAttr_1)
+    assert rego_NotSelectAttr_2 == et.SelectAttrNotExpression.make_rego("test", ast_NotSelectAttr_2)
+
+
+##
 # OrExpression, AnyCondition, AndExpression, AllCondition, NotAllCondition
 ##
 rego_OrAny = """
